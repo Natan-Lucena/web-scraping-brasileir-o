@@ -37,20 +37,15 @@ export class SaveTeamDataService {
         return false;
       }, buttonSelector);
 
-      if (buttonClicked) {
-        console.log("Botão 'Mais classificações' clicado com sucesso");
-      } else {
+      if (!buttonClicked) {
         console.error("Botão 'Mais classificações' não encontrado");
-        await browser.close();
         return;
-      }
-
-      const tableRowSelector =
-        '#spo_es_f > span > div > div.ohxm1 > div > div > div > div > div > div > div:nth-child(2) > div > div.jXpA9e.Ui5IUc > div > div > div.cLR6Wc > table > tbody > tr';
+      } 
+      const tableRowSelector = '.imso-loa.imso-hov';
       await page.waitForSelector(tableRowSelector);
-
+        
       let rows;
-      const teamsData = await page.evaluate((tableRowSelector) => {
+        let teamsData = await page.evaluate((tableRowSelector) => {
         rows = document.querySelectorAll(tableRowSelector);
         const data = [];
 
@@ -101,7 +96,10 @@ export class SaveTeamDataService {
         return data;
       }, tableRowSelector);
 
-      console.log('Tabela do Brasileirão:');
+      if (teamsData.length > 20) {
+        console.error('Dados excedentes encontrados, limitando a 20 times');
+        teamsData = teamsData.slice(0, 20);
+      }
       await this.prisma.team.deleteMany();
       await this.prisma.team.createMany({ data: teamsData });
 
