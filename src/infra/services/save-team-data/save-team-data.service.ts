@@ -40,12 +40,12 @@ export class SaveTeamDataService {
       if (!buttonClicked) {
         console.error("Botão 'Mais classificações' não encontrado");
         return;
-      } 
+      }
       const tableRowSelector = '.imso-loa.imso-hov';
       await page.waitForSelector(tableRowSelector);
-        
+
       let rows;
-        let teamsData = await page.evaluate((tableRowSelector) => {
+      let teamsData = await page.evaluate((tableRowSelector) => {
         rows = document.querySelectorAll(tableRowSelector);
         const data = [];
 
