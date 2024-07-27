@@ -25,7 +25,7 @@ export class SaveTeamDataService {
       'https://www.google.com/search?q=tabela+premier+league&sca_esv=2a9720fd994fa302&sxsrf=ADLYWIIMJeHR6xlUARN1JHZ7tI9oWN3Rog%3A1721851897430&ei=-V-hZsHxGf7R1sQPo5ySCA&ved=0ahUKEwiB0s6VvsCHAxX-qJUCHSOOBAEQ4dUDCA8&uact=5&oq=tabela+premier+league&gs_lp=Egxnd3Mtd2l6LXNlcnAiFXRhYmVsYSBwcmVtaWVyIGxlYWd1ZTIKECMYgAQYJxiKBTIFEAAYgAQyBRAAGIAEMgUQABiABDIFEAAYgAQyBRAAGIAEMgUQABiABDIFEAAYgAQyBRAAGIAEMgUQABiABEjoHFDiBFjKG3ACeAGQAQCYAasBoAHoEqoBBDAuMTW4AQPIAQD4AQGYAhGgApgTwgIKEAAYsAMY1gQYR8ICDRAAGIAEGLADGEMYigXCAg4QABiwAxjkAhjWBNgBAcICExAuGIAEGLADGEMYyAMYigXYAQLCAgwQIxiABBgTGCcYigXCAhAQABiABBixAxhDGIMBGIoFwgIIEAAYgAQYsQPCAgoQABiABBhDGIoFwgINEAAYgAQYsQMYQxiKBcICDhAAGIAEGLEDGIMBGIoFwgIHECMYsQIYJ8ICBxAAGIAEGAqYAwCIBgGQBhO6BgYIARABGAm6BgYIAhABGAiSBwQyLjE1oAecbg&sclient=gws-wiz-serp',
       'https://www.google.com/search?q=tabela+campeonato+italiano&sca_esv=2a9720fd994fa302&sxsrf=ADLYWILgHmmw4gT41T2FEhTt_Loh7WyooQ%3A1721851911871&ei=B2ChZo_sNMLX1sQP6Ziu4A0&ved=0ahUKEwjPi8CcvsCHAxXCq5UCHWmMC9wQ4dUDCA8&uact=5&oq=tabela+campeonato+italiano&gs_lp=Egxnd3Mtd2l6LXNlcnAiGnRhYmVsYSBjYW1wZW9uYXRvIGl0YWxpYW5vMgUQABiABDIFEAAYgAQyBRAAGIAEMgUQABiABDIFEAAYgAQyBRAAGIAEMgUQABiABDIFEAAYgAQyBRAAGIAEMgUQABiABEjkLlDdB1i8LXADeAGQAQGYAbkCoAGeIaoBCDAuMTkuMy4xuAEDyAEA-AEBmAIZoAK5H8ICChAAGLADGNYEGEfCAg0QABiABBiwAxhDGIoFwgIOEAAYsAMY5AIY1gTYAQHCAhMQLhiABBiwAxhDGMgDGIoF2AECwgIKECMYgAQYJxiKBcICDBAjGIAEGBMYJxiKBcICCxAAGIAEGLEDGIMBwgIIEAAYgAQYsQPCAgcQABiABBgKwgIHEAAYgAQYDZgDAIgGAZAGE7oGBggBEAEYCboGBggCEAEYCJIHBjMuMTkuM6AHsJcB&sclient=gws-wiz-serp',
     ];
-    urls.map(async (url) => await this.queue.add(JOB_NAME, { url }));
+    urls.forEach(async (url) => await this.queue.add(JOB_NAME, { url }));
   }
 
   @Process(JOB_NAME)
@@ -41,7 +41,7 @@ export class SaveTeamDataService {
     await page.goto(url);
 
     const buttonSelector = "//div[contains(text(), 'Mais classificações')]";
-    const buttonClicked = await page.evaluate((buttonSelector) => {
+    const buttonClicked = await page.evaluate((buttonSelector: string) => {
       const button = document.evaluate(
         buttonSelector,
         document,
@@ -61,12 +61,16 @@ export class SaveTeamDataService {
       await browser.close();
       return;
     }
+
+    const leagueSelector = '.PZPZlf-ssJ7i-B55dxMb';
     const tableRowSelector = '.imso-loa.imso-hov';
     await page.waitForSelector(tableRowSelector);
 
+
     let rows;
-    let teamsData = await page.evaluate((tableRowSelector) => {
+    let teamsData = await page.evaluate((tableRowSelector: string, leagueSelector: string) => {
       rows = document.querySelectorAll(tableRowSelector);
+      const leagueElement = document.querySelector(leagueSelector) as HTMLElement;
       const data = [];
 
       rows.forEach((row) => {
@@ -82,6 +86,7 @@ export class SaveTeamDataService {
         const sgElement = row.querySelector('td:nth-child(11) div');
 
         if (positionElement) {
+          const league = leagueElement.innerText;
           const position = positionElement.innerText;
           const name = nameElement.innerText;
           const points = ptsElement.innerText;
@@ -94,6 +99,7 @@ export class SaveTeamDataService {
           const goalDifference = sgElement.innerText;
 
           data.push({
+            leagueName: league,
             position: Number(position),
             name,
             points: Number(points),
@@ -114,12 +120,14 @@ export class SaveTeamDataService {
       });
 
       return data;
-    }, tableRowSelector);
+    }, tableRowSelector, leagueSelector);
 
     if (teamsData.length > 20) {
       console.error('Dados excedentes encontrados, limitando a 20 times');
       teamsData = teamsData.slice(0, 20);
     }
+
+    console.log(teamsData);
 
     await this.prisma.team.createMany({ data: teamsData });
 
