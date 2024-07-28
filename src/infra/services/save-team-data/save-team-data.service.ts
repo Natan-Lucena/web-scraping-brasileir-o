@@ -63,7 +63,7 @@ export class SaveTeamDataService {
       return;
     }
 
-    const leagueSelector = '.PZPZlf-ssJ7i-B55dxMb';
+    const leagueSelector = '.PZPZlf[data-attrid="title"]';
     const tableRowSelector = '.imso-loa.imso-hov';
     await page.waitForSelector(tableRowSelector);
 
@@ -71,10 +71,9 @@ export class SaveTeamDataService {
     let teamsData = await page.evaluate(
       (tableRowSelector: string, leagueSelector: string) => {
         rows = document.querySelectorAll(tableRowSelector);
-        const leagueElement = document.querySelector(
-          leagueSelector,
-        ) as HTMLElement;
-        console.log(leagueElement);
+        const leagueElement = document.querySelector(leagueSelector) as HTMLElement;
+        const leagueName = leagueElement ? leagueElement.innerText : 'Unknown League';
+        
         const data = [];
 
         rows.forEach((row) => {
@@ -89,8 +88,7 @@ export class SaveTeamDataService {
           const gcElement = row.querySelector('td:nth-child(10) div');
           const sgElement = row.querySelector('td:nth-child(11) div');
 
-          if (positionElement) {
-            const league = leagueElement?.innerText || 'Desconhecida';
+          if (positionElement && nameElement && ptsElement && pjElement && vitElement && eElement && derElement && gmElement && gcElement && sgElement) {
             const position = positionElement.innerText;
             const name = nameElement.innerText;
             const points = ptsElement.innerText;
@@ -103,7 +101,7 @@ export class SaveTeamDataService {
             const goalDifference = sgElement.innerText;
 
             data.push({
-              leagueName: league,
+              leagueName,
               position: Number(position),
               name,
               points: Number(points),
@@ -133,7 +131,7 @@ export class SaveTeamDataService {
       console.error('Dados excedentes encontrados, limitando a 20 times');
       teamsData = teamsData.slice(0, 20);
     }
-
+    
     try {
       await this.prisma.team.createMany({ data: teamsData });
     } catch (e) {
