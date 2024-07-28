@@ -22,8 +22,8 @@ export class SaveTeamDataService {
   async runJob() {
     const urls = [
       'https://www.google.com/search?q=tabela+do+brasileirao&oq=tabela+do+brasileirao&gs_lcrp=EgZjaHJvbWUyBggAEEUYOTIGCAEQLhhA0gEINDc3MmowajGoAgCwAgA&sourceid=chrome&ie=UTF-8',
-      'https://www.google.com/search?q=tabela+premier+league&sca_esv=2a9720fd994fa302&sxsrf=ADLYWIIMJeHR6xlUARN1JHZ7tI9oWN3Rog%3A1721851897430&ei=-V-hZsHxGf7R1sQPo5ySCA&ved=0ahUKEwiB0s6VvsCHAxX-qJUCHSOOBAEQ4dUDCA8&uact=5&oq=tabela+premier+league&gs_lp=Egxnd3Mtd2l6LXNlcnAiFXRhYmVsYSBwcmVtaWVyIGxlYWd1ZTIKECMYgAQYJxiKBTIFEAAYgAQyBRAAGIAEMgUQABiABDIFEAAYgAQyBRAAGIAEMgUQABiABDIFEAAYgAQyBRAAGIAEMgUQABiABEjoHFDiBFjKG3ACeAGQAQCYAasBoAHoEqoBBDAuMTW4AQPIAQD4AQGYAhGgApgTwgIKEAAYsAMY1gQYR8ICDRAAGIAEGLADGEMYigXCAg4QABiwAxjkAhjWBNgBAcICExAuGIAEGLADGEMYyAMYigXYAQLCAgwQIxiABBgTGCcYigXCAhAQABiABBixAxhDGIMBGIoFwgIIEAAYgAQYsQPCAgoQABiABBhDGIoFwgINEAAYgAQYsQMYQxiKBcICDhAAGIAEGLEDGIMBGIoFwgIHECMYsQIYJ8ICBxAAGIAEGAqYAwCIBgGQBhO6BgYIARABGAm6BgYIAhABGAiSBwQyLjE1oAecbg&sclient=gws-wiz-serp',
-      'https://www.google.com/search?q=tabela+campeonato+italiano&sca_esv=2a9720fd994fa302&sxsrf=ADLYWILgHmmw4gT41T2FEhTt_Loh7WyooQ%3A1721851911871&ei=B2ChZo_sNMLX1sQP6Ziu4A0&ved=0ahUKEwjPi8CcvsCHAxXCq5UCHWmMC9wQ4dUDCA8&uact=5&oq=tabela+campeonato+italiano&gs_lp=Egxnd3Mtd2l6LXNlcnAiGnRhYmVsYSBjYW1wZW9uYXRvIGl0YWxpYW5vMgUQABiABDIFEAAYgAQyBRAAGIAEMgUQABiABDIFEAAYgAQyBRAAGIAEMgUQABiABDIFEAAYgAQyBRAAGIAEMgUQABiABEjkLlDdB1i8LXADeAGQAQGYAbkCoAGeIaoBCDAuMTkuMy4xuAEDyAEA-AEBmAIZoAK5H8ICChAAGLADGNYEGEfCAg0QABiABBiwAxhDGIoFwgIOEAAYsAMY5AIY1gTYAQHCAhMQLhiABBiwAxhDGMgDGIoF2AECwgIKECMYgAQYJxiKBcICDBAjGIAEGBMYJxiKBcICCxAAGIAEGLEDGIMBwgIIEAAYgAQYsQPCAgcQABiABBgKwgIHEAAYgAQYDZgDAIgGAZAGE7oGBggBEAEYCboGBggCEAEYCJIHBjMuMTkuM6AHsJcB&sclient=gws-wiz-serp',
+      //'https://www.google.com/search?q=tabela+premier+league&sca_esv=2a9720fd994fa302&sxsrf=ADLYWIIMJeHR6xlUARN1JHZ7tI9oWN3Rog%3A1721851897430&ei=-V-hZsHxGf7R1sQPo5ySCA&ved=0ahUKEwiB0s6VvsCHAxX-qJUCHSOOBAEQ4dUDCA8&uact=5&oq=tabela+premier+league&gs_lp=Egxnd3Mtd2l6LXNlcnAiFXRhYmVsYSBwcmVtaWVyIGxlYWd1ZTIKECMYgAQYJxiKBTIFEAAYgAQyBRAAGIAEMgUQABiABDIFEAAYgAQyBRAAGIAEMgUQABiABDIFEAAYgAQyBRAAGIAEMgUQABiABEjoHFDiBFjKG3ACeAGQAQCYAasBoAHoEqoBBDAuMTW4AQPIAQD4AQGYAhGgApgTwgIKEAAYsAMY1gQYR8ICDRAAGIAEGLADGEMYigXCAg4QABiwAxjkAhjWBNgBAcICExAuGIAEGLADGEMYyAMYigXYAQLCAgwQIxiABBgTGCcYigXCAhAQABiABBixAxhDGIMBGIoFwgIIEAAYgAQYsQPCAgoQABiABBhDGIoFwgINEAAYgAQYsQMYQxiKBcICDhAAGIAEGLEDGIMBGIoFwgIHECMYsQIYJ8ICBxAAGIAEGAqYAwCIBgGQBhO6BgYIARABGAm6BgYIAhABGAiSBwQyLjE1oAecbg&sclient=gws-wiz-serp',
+      //'https://www.google.com/search?q=tabela+campeonato+italiano&sca_esv=2a9720fd994fa302&sxsrf=ADLYWILgHmmw4gT41T2FEhTt_Loh7WyooQ%3A1721851911871&ei=B2ChZo_sNMLX1sQP6Ziu4A0&ved=0ahUKEwjPi8CcvsCHAxXCq5UCHWmMC9wQ4dUDCA8&uact=5&oq=tabela+campeonato+italiano&gs_lp=Egxnd3Mtd2l6LXNlcnAiGnRhYmVsYSBjYW1wZW9uYXRvIGl0YWxpYW5vMgUQABiABDIFEAAYgAQyBRAAGIAEMgUQABiABDIFEAAYgAQyBRAAGIAEMgUQABiABDIFEAAYgAQyBRAAGIAEMgUQABiABEjkLlDdB1i8LXADeAGQAQGYAbkCoAGeIaoBCDAuMTkuMy4xuAEDyAEA-AEBmAIZoAK5H8ICChAAGLADGNYEGEfCAg0QABiABBiwAxhDGIoFwgIOEAAYsAMY5AIY1gTYAQHCAhMQLhiABBiwAxhDGMgDGIoF2AECwgIKECMYgAQYJxiKBcICDBAjGIAEGBMYJxiKBcICCxAAGIAEGLEDGIMBwgIIEAAYgAQYsQPCAgcQABiABBgKwgIHEAAYgAQYDZgDAIgGAZAGE7oGBggBEAEYCboGBggCEAEYCJIHBjMuMTkuM6AHsJcB&sclient=gws-wiz-serp',
     ];
     urls.map(async (url) => await this.queue.add(JOB_NAME, { url }));
   }
@@ -92,6 +92,7 @@ export class SaveTeamDataService {
           const goalsFor = gmElement.innerText;
           const goalsAgainst = gcElement.innerText;
           const goalDifference = sgElement.innerText;
+          const key = `${position}-${name}`;
 
           data.push({
             position: Number(position),
@@ -105,6 +106,7 @@ export class SaveTeamDataService {
             goalsAgainst: Number(goalsAgainst),
             goalDifference: Number(goalDifference),
           });
+
         } else {
           console.error(
             'Não foi possível encontrar um ou mais elementos em uma linha:',
@@ -116,10 +118,17 @@ export class SaveTeamDataService {
       return data;
     }, tableRowSelector);
 
-    if (teamsData.length > 20) {
-      console.error('Dados excedentes encontrados, limitando a 20 times');
-      teamsData = teamsData.slice(0, 20);
-    }
+    const seen = new Set();
+    teamsData = teamsData.filter((team) => {
+      const key = `${team.position}-${team.name}`;
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    });
+
+    console.log('Dados:', teamsData);
 
     await this.prisma.team.createMany({ data: teamsData });
 
