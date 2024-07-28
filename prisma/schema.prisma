@@ -15,6 +15,7 @@ datasource db {
 
 
 model Team {
+  leagueName String 
   id Int @id @default(autoincrement())
   name String @unique
   points Int @default(0)
