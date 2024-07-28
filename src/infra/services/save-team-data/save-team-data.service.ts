@@ -26,13 +26,12 @@ export class SaveTeamDataService {
       'https://www.google.com/search?q=tabela+campeonato+italiano&sca_esv=2a9720fd994fa302&sxsrf=ADLYWILgHmmw4gT41T2FEhTt_Loh7WyooQ%3A1721851911871&ei=B2ChZo_sNMLX1sQP6Ziu4A0&ved=0ahUKEwjPi8CcvsCHAxXCq5UCHWmMC9wQ4dUDCA8&uact=5&oq=tabela+campeonato+italiano&gs_lp=Egxnd3Mtd2l6LXNlcnAiGnRhYmVsYSBjYW1wZW9uYXRvIGl0YWxpYW5vMgUQABiABDIFEAAYgAQyBRAAGIAEMgUQABiABDIFEAAYgAQyBRAAGIAEMgUQABiABDIFEAAYgAQyBRAAGIAEMgUQABiABEjkLlDdB1i8LXADeAGQAQGYAbkCoAGeIaoBCDAuMTkuMy4xuAEDyAEA-AEBmAIZoAK5H8ICChAAGLADGNYEGEfCAg0QABiABBiwAxhDGIoFwgIOEAAYsAMY5AIY1gTYAQHCAhMQLhiABBiwAxhDGMgDGIoF2AECwgIKECMYgAQYJxiKBcICDBAjGIAEGBMYJxiKBcICCxAAGIAEGLEDGIMBwgIIEAAYgAQYsQPCAgcQABiABBgKwgIHEAAYgAQYDZgDAIgGAZAGE7oGBggBEAEYCboGBggCEAEYCJIHBjMuMTkuM6AHsJcB&sclient=gws-wiz-serp',
     ];
     urls.map(async (url) => await this.queue.add(JOB_NAME, { url }));
-    console.log('adicionou');
   }
 
   @Process(JOB_NAME)
   async processQueue(job: any) {
     const { url } = job.data;
-    console.log('tratando');
+
     const browser = await puppeteer.launch({
       headless: true,
       defaultViewport: null,
@@ -42,7 +41,7 @@ export class SaveTeamDataService {
     await page.goto(url);
 
     const buttonSelector = "//div[contains(text(), 'Mais classificações')]";
-    const buttonClicked = await page.evaluate((buttonSelector: string) => {
+    const buttonClicked = await page.evaluate((buttonSelector) => {
       const button = document.evaluate(
         buttonSelector,
         document,
@@ -62,81 +61,76 @@ export class SaveTeamDataService {
       await browser.close();
       return;
     }
-
-    const leagueSelector = '.PZPZlf[data-attrid="title"]';
     const tableRowSelector = '.imso-loa.imso-hov';
     await page.waitForSelector(tableRowSelector);
 
     let rows;
-    let teamsData = await page.evaluate(
-      (tableRowSelector: string, leagueSelector: string) => {
-        rows = document.querySelectorAll(tableRowSelector);
-        const leagueElement = document.querySelector(leagueSelector) as HTMLElement;
-        const leagueName = leagueElement ? leagueElement.innerText : 'Unknown League';
-        
-        const data = [];
+    let teamsData = await page.evaluate((tableRowSelector) => {
+      rows = document.querySelectorAll(tableRowSelector);
+      const data = [];
 
-        rows.forEach((row) => {
-          const positionElement = row.querySelector('td:nth-child(2) .iU5t0d');
-          const nameElement = row.querySelector('td:nth-child(3) .ellipsisize');
-          const ptsElement = row.querySelector('td:nth-child(4) div');
-          const pjElement = row.querySelector('td:nth-child(5) div');
-          const vitElement = row.querySelector('td:nth-child(6) div');
-          const eElement = row.querySelector('td:nth-child(7) div');
-          const derElement = row.querySelector('td:nth-child(8) div');
-          const gmElement = row.querySelector('td:nth-child(9) div');
-          const gcElement = row.querySelector('td:nth-child(10) div');
-          const sgElement = row.querySelector('td:nth-child(11) div');
+      rows.forEach((row) => {
+        const positionElement = row.querySelector('td:nth-child(2) .iU5t0d');
+        const nameElement = row.querySelector('td:nth-child(3) .ellipsisize');
+        const ptsElement = row.querySelector('td:nth-child(4) div');
+        const pjElement = row.querySelector('td:nth-child(5) div');
+        const vitElement = row.querySelector('td:nth-child(6) div');
+        const eElement = row.querySelector('td:nth-child(7) div');
+        const derElement = row.querySelector('td:nth-child(8) div');
+        const gmElement = row.querySelector('td:nth-child(9) div');
+        const gcElement = row.querySelector('td:nth-child(10) div');
+        const sgElement = row.querySelector('td:nth-child(11) div');
 
-          if (positionElement && nameElement && ptsElement && pjElement && vitElement && eElement && derElement && gmElement && gcElement && sgElement) {
-            const position = positionElement.innerText;
-            const name = nameElement.innerText;
-            const points = ptsElement.innerText;
-            const matchesPlayeds = pjElement.innerText;
-            const matchesWon = vitElement.innerText;
-            const matchesDrawn = eElement.innerText;
-            const matchesLost = derElement.innerText;
-            const goalsFor = gmElement.innerText;
-            const goalsAgainst = gcElement.innerText;
-            const goalDifference = sgElement.innerText;
+        if (positionElement) {
+          const position = positionElement.innerText;
+          const name = nameElement.innerText;
+          const points = ptsElement.innerText;
+          const matchesPlayeds = pjElement.innerText;
+          const matchesWon = vitElement.innerText;
+          const matchesDrawn = eElement.innerText;
+          const matchesLost = derElement.innerText;
+          const goalsFor = gmElement.innerText;
+          const goalsAgainst = gcElement.innerText;
+          const goalDifference = sgElement.innerText;
+          const key = `${position}-${name}`;
 
-            data.push({
-              leagueName,
-              position: Number(position),
-              name,
-              points: Number(points),
-              matchesPlayeds: Number(matchesPlayeds),
-              matchesWon: Number(matchesWon),
-              matchesDrawn: Number(matchesDrawn),
-              matchesLost: Number(matchesLost),
-              goalsFor: Number(goalsFor),
-              goalsAgainst: Number(goalsAgainst),
-              goalDifference: Number(goalDifference),
-            });
-          } else {
-            console.error(
-              'Não foi possível encontrar um ou mais elementos em uma linha:',
-              row,
-            );
-          }
-        });
+          data.push({
+            position: Number(position),
+            name,
+            points: Number(points),
+            matchesPlayeds: Number(matchesPlayeds),
+            matchesWon: Number(matchesWon),
+            matchesDrawn: Number(matchesDrawn),
+            matchesLost: Number(matchesLost),
+            goalsFor: Number(goalsFor),
+            goalsAgainst: Number(goalsAgainst),
+            goalDifference: Number(goalDifference),
+          });
 
-        return data;
-      },
-      tableRowSelector,
-      leagueSelector,
-    );
+        } else {
+          console.error(
+            'Não foi possível encontrar um ou mais elementos em uma linha:',
+            row,
+          );
+        }
+      });
 
-    if (teamsData.length > 20) {
-      console.error('Dados excedentes encontrados, limitando a 20 times');
-      teamsData = teamsData.slice(0, 20);
-    }
-    
-    try {
-      await this.prisma.team.createMany({ data: teamsData });
-    } catch (e) {
-      console.log(e);
-    }
+      return data;
+    }, tableRowSelector);
+
+    const seen = new Set();
+    teamsData = teamsData.filter((team) => {
+      const key = `${team.position}-${team.name}`;
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    });
+
+    console.log('Dados:', teamsData);
+
+    await this.prisma.team.createMany({ data: teamsData });
 
     await browser.close();
     console.log('Dados processados com sucesso');
