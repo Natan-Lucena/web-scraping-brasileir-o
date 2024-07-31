@@ -6,7 +6,8 @@ import 'dotenv/config';
 import { InjectQueue, Process, Processor } from '@nestjs/bull';
 import { Queue } from 'bull';
 import { filterUniqueTimes } from 'src/utils/filterUniqueTimes';
-const QUEUE_NAME = process.env.QUEUE_NAME;
+
+const QUEUE_NAME = process.env.SAVE_QUEUE_NAME;
 const JOB_NAME = 'process-team-job';
 
 @Injectable()
@@ -138,7 +139,6 @@ export class SaveTeamDataService {
       leagueSelector,
     );
 
-    
     teamsData = filterUniqueTimes(teamsData);
 
     try {
