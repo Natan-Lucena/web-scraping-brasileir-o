@@ -6,12 +6,13 @@ import 'dotenv/config';
 import { InjectQueue, Process, Processor } from '@nestjs/bull';
 import { Queue } from 'bull';
 import { filterUniqueTimes } from 'src/utils/filterUniqueTimes';
+
 const QUEUE_NAME = process.env.QUEUE_NAME;
-const JOB_NAME = 'process-team-job';
+const JOB_NAME = 'process-check-game-job';
 
 @Injectable()
 @Processor(QUEUE_NAME)
-export class SaveTeamDataService {
+export class CheckTeamGameService {
   constructor(
     private prisma: PrismaService,
     @InjectQueue(QUEUE_NAME)
@@ -59,70 +60,35 @@ export class SaveTeamDataService {
       return;
     }
 
-    const leagueSelector = '.PZPZlf[data-attrid="title"]';
     const tableRowSelector = '.imso-loa.imso-hov';
     await page.waitForSelector(tableRowSelector);
 
     let rows;
     let teamsData = await page.evaluate(
-      async (tableRowSelector: string, leagueSelector: string) => {
+      async (tableRowSelector: string) => {
         rows = document.querySelectorAll(tableRowSelector);
-        const leagueElement = document.querySelector(
-          leagueSelector,
-        ) as HTMLElement;
-        const leagueName = leagueElement
-          ? leagueElement.innerText
-          : 'Unknown League';
 
         const data = [];
 
         rows.forEach((row) => {
           const positionElement = row.querySelector('td:nth-child(2) .iU5t0d');
           const nameElement = row.querySelector('td:nth-child(3) .ellipsisize');
-          const ptsElement = row.querySelector('td:nth-child(4) div');
-          const pjElement = row.querySelector('td:nth-child(5) div');
-          const vitElement = row.querySelector('td:nth-child(6) div');
-          const eElement = row.querySelector('td:nth-child(7) div');
-          const derElement = row.querySelector('td:nth-child(8) div');
-          const gmElement = row.querySelector('td:nth-child(9) div');
-          const gcElement = row.querySelector('td:nth-child(10) div');
-          const sgElement = row.querySelector('td:nth-child(11) div');
+          const inGameElement = row.querySelector('.GXDoWd.Ycf7w.OGs04e.de0OAd');
+
 
           if (
-            positionElement &&
-            nameElement &&
-            ptsElement &&
-            pjElement &&
-            vitElement &&
-            eElement &&
-            derElement &&
-            gmElement &&
-            gcElement &&
-            sgElement
+            inGameElement
           ) {
             const position = positionElement.innerText;
             const name = nameElement.innerText;
-            const points = ptsElement.innerText;
-            const matchesPlayeds = pjElement.innerText;
-            const matchesWon = vitElement.innerText;
-            const matchesDrawn = eElement.innerText;
-            const matchesLost = derElement.innerText;
-            const goalsFor = gmElement.innerText;
-            const goalsAgainst = gcElement.innerText;
-            const goalDifference = sgElement.innerText;
-
+            const inGame = true
+            const scoreboard = inGameElement.innerText;
+            
             data.push({
-              leagueName,
-              position: Number(position),
               name,
-              points: Number(points),
-              matchesPlayeds: Number(matchesPlayeds),
-              matchesWon: Number(matchesWon),
-              matchesDrawn: Number(matchesDrawn),
-              matchesLost: Number(matchesLost),
-              goalsFor: Number(goalsFor),
-              goalsAgainst: Number(goalsAgainst),
-              goalDifference: Number(goalDifference),
+              position,
+              inGame,
+              scoreboard,
             });
           } else {
             console.error(
@@ -135,21 +101,10 @@ export class SaveTeamDataService {
         return data;
       },
       tableRowSelector,
-      leagueSelector,
     );
 
-    
     teamsData = filterUniqueTimes(teamsData);
-
-    try {
-      await this.prisma.team.deleteMany({
-        where: { leagueName: teamsData[0].leagueName },
-      });
-      await this.prisma.team.createMany({ data: teamsData });
-    } catch (e) {
-      console.log(e);
-    }
-
+    console.log(teamsData);
     await browser.close();
     console.log('Dados da liga ' + teamsData[0].leagueName + ' com sucesso');
   }
