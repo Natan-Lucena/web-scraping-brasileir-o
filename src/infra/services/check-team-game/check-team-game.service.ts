@@ -96,7 +96,9 @@ export class CheckTeamGameService {
 
       return data;
     }, tableRowSelector);
-
+    // pega o nome do time, ve as partidas, se o time está jogando e n tem partida, CREATE MATCH
+    // pega o nome do time, ve as partidas, se o time está com um placar diferente da partida, NOTIFY USER
+    // pega as partidas, se tem partida in game, mas nenhum time está jogando, update IN game -> false
     teamsData = filterUniqueTimes(teamsData);
     console.log(teamsData);
     await browser.close();
