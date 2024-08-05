@@ -7,6 +7,6 @@ import 'dotenv/config';
 
 @Module({
   imports: [BullModule.registerQueue({ name: process.env.QUEUE_NAME })],
-  providers: [CheckTeamGameService, PrismaService],
+  providers: [CheckTeamGameService, SaveTeamDataService, PrismaService],
 })
 export class InfraModule {}
