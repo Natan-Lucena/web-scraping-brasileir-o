@@ -7,7 +7,7 @@ import { InjectQueue, Process, Processor } from '@nestjs/bull';
 import { Queue } from 'bull';
 import { filterUniqueTimes } from 'src/utils/filterUniqueTimes';
 
-const QUEUE_NAME = process.env.QUEUE_NAME;
+const QUEUE_NAME = process.env.CHECK_QUEUE_NAME;
 const JOB_NAME = 'process-check-game-job';
 
 @Injectable()
@@ -64,45 +64,41 @@ export class CheckTeamGameService {
     await page.waitForSelector(tableRowSelector);
 
     let rows;
-    let teamsData = await page.evaluate(
-      async (tableRowSelector: string) => {
-        rows = document.querySelectorAll(tableRowSelector);
+    let teamsData = await page.evaluate(async (tableRowSelector: string) => {
+      rows = document.querySelectorAll(tableRowSelector);
 
-        const data = [];
+      const data = [];
 
-        rows.forEach((row) => {
-          const positionElement = row.querySelector('td:nth-child(2) .iU5t0d');
-          const nameElement = row.querySelector('td:nth-child(3) .ellipsisize');
-          const inGameElement = row.querySelector('.GXDoWd.Ycf7w.OGs04e.de0OAd');
+      rows.forEach((row) => {
+        const positionElement = row.querySelector('td:nth-child(2) .iU5t0d');
+        const nameElement = row.querySelector('td:nth-child(3) .ellipsisize');
+        const inGameElement = row.querySelector('.GXDoWd.Ycf7w.OGs04e.de0OAd');
 
+        if (inGameElement) {
+          const position = positionElement.innerText;
+          const name = nameElement.innerText;
+          const inGame = true;
+          const scoreboard = inGameElement.innerText;
 
-          if (
-            inGameElement
-          ) {
-            const position = positionElement.innerText;
-            const name = nameElement.innerText;
-            const inGame = true
-            const scoreboard = inGameElement.innerText;
-            
-            data.push({
-              name,
-              position,
-              inGame,
-              scoreboard,
-            });
-          } else {
-            console.error(
-              'Não foi possível encontrar um ou mais elementos em uma linha:',
-              row,
-            );
-          }
-        });
+          data.push({
+            name,
+            position,
+            inGame,
+            scoreboard,
+          });
+        } else {
+          console.error(
+            'Não foi possível encontrar um ou mais elementos em uma linha:',
+            row,
+          );
+        }
+      });
 
-        return data;
-      },
-      tableRowSelector,
-    );
-
+      return data;
+    }, tableRowSelector);
+    // pega o nome do time, ve as partidas, se o time está jogando e n tem partida, CREATE MATCH
+    // pega o nome do time, ve as partidas, se o time está com um placar diferente da partida, NOTIFY USER
+    // pega as partidas, se tem partida in game, mas nenhum time está jogando, update IN game -> false
     teamsData = filterUniqueTimes(teamsData);
     console.log(teamsData);
     await browser.close();

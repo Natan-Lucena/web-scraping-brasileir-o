@@ -27,6 +27,8 @@ model Team {
   goalsFor Int @default(0)
   goalsAgainst Int @default(0)
   goalDifference Int @default(0)
+  MatchesFor Match[] @relation("teamMatches")
+  MatchsAgainst Match[] @relation("matchesAgainst")
 
   @@map("teams")
 }
@@ -37,4 +39,18 @@ model User {
   name String
   phone String @unique
   @@map("users")
+
+}
+
+model Match {
+  id Int @id @default(autoincrement())
+  teamName String
+  adversaryName String
+  inGame Boolean @default(true)
+  goalsFor Int @default(0)
+  goalsAgainst Int @default(0)
+  createdAt DateTime @default(now())
+  Team Team @relation("teamMatches", fields: [teamName], references: [name])
+  Adversary Team @relation("matchesAgainst",fields:[adversaryName], references: [name])
+ 
 }
