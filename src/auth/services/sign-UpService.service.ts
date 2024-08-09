@@ -4,7 +4,7 @@ import { BcryptProviderService } from 'src/encrypt-provider/bcryptProviderServic
 import { UserRepository } from 'src/providers/repositories/userRepository';
 
 @Injectable()
-export class signInUserService {
+export class signUpUserService {
   constructor(
     private repository: UserRepository,
     private bcryptProvider: BcryptProviderService,
