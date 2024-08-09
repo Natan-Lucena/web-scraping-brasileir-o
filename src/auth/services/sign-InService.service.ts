@@ -32,6 +32,8 @@ export class signInUserService {
       throw new Error('There is already a user with this phone number');
     }
 
+    await this.bcryptProvider.IsValidPassword(password);
+
     password = await this.bcryptProvider.hashPassword(password);
 
     return this.repository.registerUser(email, name, phone, password);
