@@ -5,7 +5,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 export class UserRepository {
   constructor(private prisma: PrismaService) {}
 
-  userCreate(email: string, name: string, phone: string) {
+  registerUser(email: string, name: string, phone: string) {
     return this.prisma.user.create({
       data: {
         email,
@@ -22,12 +22,6 @@ export class UserRepository {
     return this.prisma.user.update({
       where: { id },
       data,
-    });
-  }
-
-  userDelete(id: number) {
-    return this.prisma.user.delete({
-      where: { id },
     });
   }
 
