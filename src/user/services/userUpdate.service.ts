@@ -1,13 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
 import { UserRepository } from 'src/providers/repositories/userRepository';
 
 @Injectable()
 export class UserUpdateService {
-  constructor(
-    private repository: UserRepository,
-    private prisma: PrismaService,
-  ) {}
+  constructor(private repository: UserRepository) {}
 
   async userUpdate(
     id: number,
