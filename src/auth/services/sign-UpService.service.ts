@@ -36,6 +36,12 @@ export class signUpUserService {
 
     password = await this.bcryptProvider.hashPassword(password);
 
-    return this.repository.registerUser(email, name, phone, password);
+    const user = await this.repository.registerUser(
+      email,
+      name,
+      phone,
+      password,
+    );
+    return { email: user.email, name: user.name, phone: user.phone };
   }
 }
