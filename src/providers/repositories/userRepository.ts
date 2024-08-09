@@ -5,12 +5,13 @@ import { PrismaService } from 'src/prisma/prisma.service';
 export class UserRepository {
   constructor(private prisma: PrismaService) {}
 
-  registerUser(email: string, name: string, phone: string) {
+  registerUser(email: string, name: string, phone: string, password: string) {
     return this.prisma.user.create({
       data: {
         email,
         name,
         phone,
+        password,
       },
     });
   }
