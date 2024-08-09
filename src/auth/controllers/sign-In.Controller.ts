@@ -8,7 +8,7 @@ export class singInController {
 
   @Post('sigIn')
   sigIn(@Body() createUserDto: signInUserDto) {
-    const { email, name, phone } = createUserDto;
-    return this.userService.userCreate(email, name, phone);
+    const { email, name, phone, password } = createUserDto;
+    return this.userService.userCreate(email, name, phone, password);
   }
 }
