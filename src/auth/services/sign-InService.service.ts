@@ -1,11 +1,21 @@
 import { Injectable } from '@nestjs/common';
+import { BcryptProviderService } from 'src/encrypt-provider/bcryptProviderService';
+
 import { UserRepository } from 'src/providers/repositories/userRepository';
 
 @Injectable()
 export class signInUserService {
-  constructor(private repository: UserRepository) {}
+  constructor(
+    private repository: UserRepository,
+    private bcryptProvider: BcryptProviderService,
+  ) {}
 
-  async userCreate(email: string, name: string, phone: string) {
+  async userCreate(
+    email: string,
+    name: string,
+    phone: string,
+    password: string,
+  ) {
     const existingUserByEmail = await this.repository.findUserByEmail(email);
 
     if (existingUserByEmail) {
@@ -22,6 +32,8 @@ export class signInUserService {
       throw new Error('There is already a user with this phone number');
     }
 
-    return this.repository.registerUser(email, name, phone);
+    password = await this.bcryptProvider.hashPassword(password);
+
+    return this.repository.registerUser(email, name, phone, password);
   }
 }
