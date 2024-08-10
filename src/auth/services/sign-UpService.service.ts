@@ -1,9 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { BcryptProviderService } from 'src/encrypt-provider/bcryptProviderService';
 
 import { UserRepository } from 'src/providers/repositories/userRepository';
 import isValidPhone from 'src/utils/isValidPhone';
-
 
 @Injectable()
 export class signUpUserService {
@@ -21,18 +24,23 @@ export class signUpUserService {
     const existingUserByEmail = await this.repository.findUserByEmail(email);
 
     if (existingUserByEmail) {
-      throw new Error('There is already a user with this email');
+      throw new UnauthorizedException(
+        'There is already a user with this email',
+      );
     }
 
     if (!isValidPhone(phone)) {
-
-      throw new Error('Phone number is invalid. It should be 9 digits.');
+      throw new BadRequestException(
+        'Phone number is invalid. It should be 9 digits.',
+      );
     }
 
     const existingUserByPhone = await this.repository.findUserByPhone(phone);
 
     if (existingUserByPhone) {
-      throw new Error('There is already a user with this phone number');
+      throw new UnauthorizedException(
+        'There is already a user with this phone number',
+      );
     }
 
     await this.bcryptProvider.IsValidPassword(password);
