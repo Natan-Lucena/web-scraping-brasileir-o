@@ -6,7 +6,10 @@ import { BullModule } from '@nestjs/bull';
 import 'dotenv/config';
 
 @Module({
-  imports: [BullModule.registerQueue({ name: process.env.QUEUE_NAME })],
-  providers: [CheckTeamGameService, PrismaService],
+  imports: [
+    BullModule.registerQueue({ name: process.env.SAVE_QUEUE_NAME }),
+    BullModule.registerQueue({ name: process.env.CHECK_QUEUE_NAME }),
+  ],
+  providers: [SaveTeamDataService, CheckTeamGameService, PrismaService],
 })
 export class InfraModule {}
