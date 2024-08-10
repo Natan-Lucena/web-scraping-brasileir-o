@@ -7,7 +7,7 @@ export class signUpController {
   constructor(private userService: signUpUserService) {}
 
   @Post('signUp')
-  sigIn(@Body() createUserDto: signUpUserDto) {
+  async sigIn(@Body() createUserDto: signUpUserDto) {
     const { email, name, phone, password } = createUserDto;
     return this.userService.userCreate(email, name, phone, password);
   }
