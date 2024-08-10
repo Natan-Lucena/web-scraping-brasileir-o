@@ -4,7 +4,8 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { PrismaService } from './prisma/prisma.service';
 import 'dotenv/config';
 import { BullModule } from '@nestjs/bull';
-import { UserModule } from './user/services/user.module';
+import { UserModule } from './user/user.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { UserModule } from './user/services/user.module';
       },
     }),
     UserModule,
+    AuthModule,
   ],
   providers: [PrismaService],
 })
