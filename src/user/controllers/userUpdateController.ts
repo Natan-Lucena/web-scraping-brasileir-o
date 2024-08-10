@@ -6,6 +6,7 @@ export class UserUpadateController {
   constructor(private userService: UserUpdateService) {}
 
   @Patch('updateRegister/:id')
+
   async userUpdate(
     @Param('id') id: string,
     @Body() data: { email?: string; name?: string; phone?: string },

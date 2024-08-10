@@ -4,6 +4,7 @@ import { BcryptProviderService } from 'src/encrypt-provider/bcryptProviderServic
 import { UserRepository } from 'src/providers/repositories/userRepository';
 import isValidPhone from 'src/utils/isValidPhone';
 
+
 @Injectable()
 export class signUpUserService {
   constructor(
@@ -24,6 +25,7 @@ export class signUpUserService {
     }
 
     if (!isValidPhone(phone)) {
+
       throw new Error('Phone number is invalid. It should be 9 digits.');
     }
 
