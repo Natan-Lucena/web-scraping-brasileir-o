@@ -28,12 +28,12 @@ export class signUpUserService {
         'There is already a user with this email',
       );
     }
-
-    if (!isValidPhone(phone)) {
-      throw new BadRequestException(
-        'Phone number is invalid. It should be 9 digits.',
-      );
-    }
+    //TO-DO: Fix
+    // if (!isValidPhone(phone)) {
+    //   throw new BadRequestException(
+    //     'Phone number is invalid. It should be 9 digits.',
+    //   );
+    // }
 
     const existingUserByPhone = await this.repository.findUserByPhone(phone);
 

@@ -10,7 +10,7 @@ export class signUpUserDto {
   name: string;
   @IsNotEmpty()
   @IsString()
-  @IsPhoneNumber('BR')
+  @IsPhoneNumber()
   phone: string;
   @IsNotEmpty()
   @IsString()
