@@ -1,3 +1,4 @@
 export default function isValidPhone(phone: string): boolean {
-  return /^\d{9}$/.test(phone);
+  const cleanedPhone = phone.replace(/[\s-]/g, '');
+  return /^\d{13}$/.test(cleanedPhone);
 }

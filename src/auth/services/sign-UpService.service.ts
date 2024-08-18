@@ -1,8 +1,8 @@
 import {
-  BadRequestException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+
 import { BcryptProviderService } from 'src/encrypt-provider/bcryptProviderService';
 
 import { UserRepository } from 'src/providers/repositories/userRepository';
@@ -28,12 +28,13 @@ export class signUpUserService {
         'There is already a user with this email',
       );
     }
-    //TO-DO: Fix
-    // if (!isValidPhone(phone)) {
-    //   throw new BadRequestException(
-    //     'Phone number is invalid. It should be 9 digits.',
-    //   );
-    // }
+      
+      
+    if (!isValidPhone(phone)) {
+      throw new UnauthorizedException(
+        'Phone number is invalid',
+      );
+    }
 
     const existingUserByPhone = await this.repository.findUserByPhone(phone);
 
