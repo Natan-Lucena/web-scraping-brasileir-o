@@ -8,15 +8,13 @@ import { PrismaService } from 'src/prisma/prisma.service';
 export class UserRepository {
   constructor(private prisma: PrismaService) {}
 
-
   async registerUser(
     email: string,
     name: string,
     phone: string,
     password: string,
   ): Promise<User> {
-
-    return this.prisma.user.create({
+    return await this.prisma.user.create({
       data: {
         email,
         name,
@@ -26,38 +24,30 @@ export class UserRepository {
     });
   }
 
-  async userUpdate(
+  async userUpdateById(
     id: number,
     data: { email?: string; name?: string; phone?: string },
   ): Promise<User> {
-
-
-    return this.prisma.user.update({
+    return await this.prisma.user.update({
       where: { id },
       data,
     });
   }
 
-
   async findUserById(id: number): Promise<User | null> {
-
-    return this.prisma.user.findUnique({
+    return await this.prisma.user.findFirst({
       where: { id },
     });
   }
 
-
   async findUserByEmail(email: string): Promise<User | null> {
-
-    return this.prisma.user.findUnique({
+    return await this.prisma.user.findFirst({
       where: { email },
     });
   }
 
-
   async findUserByPhone(phone: string): Promise<User | null> {
-
-    return this.prisma.user.findUnique({
+    return await this.prisma.user.findFirst({
       where: { phone },
     });
   }
