@@ -1,8 +1,8 @@
 import { Body, Controller, Delete, UseGuards } from '@nestjs/common';
 import { JwtGuard } from 'src/auth/guards/jwt.guard';
 import { GetUser } from 'src/auth/decorators/getUser.decorator';
-import { RegisterInterestDto } from '../dtos/registerInterestDto';
-import { DeleteUserInterestService } from '../services/deleteUserInterest.service';
+import { DeleteUserInterestService } from 'src/user/services/delete-user-interest/deleteUserInterest.service';
+import { RegisterInterestDto } from 'src/user/dtos/registerInterestDto';
 
 @UseGuards(JwtGuard)
 @Controller('user')
