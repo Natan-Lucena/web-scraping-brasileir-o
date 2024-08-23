@@ -1,12 +1,8 @@
-import {
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 
 import { BcryptProviderService } from 'src/encrypt-provider/bcryptProviderService';
 
 import { UserRepository } from 'src/providers/repositories/userRepository';
-import isValidPhone from 'src/utils/isValidPhone';
 
 @Injectable()
 export class signUpUserService {
@@ -26,13 +22,6 @@ export class signUpUserService {
     if (existingUserByEmail) {
       throw new UnauthorizedException(
         'There is already a user with this email',
-      );
-    }
-      
-      
-    if (!isValidPhone(phone)) {
-      throw new UnauthorizedException(
-        'Phone number is invalid',
       );
     }
 
