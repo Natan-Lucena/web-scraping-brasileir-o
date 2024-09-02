@@ -1,9 +1,10 @@
-import { Team } from '@prisma/client';
-
-export const filterUniqueTimes = (teamsData: Team[]): Team[] => {
+export const filterUniqueItems = <T>(
+  items: T[],
+  getKey: (item: T) => string,
+): T[] => {
   const seen = new Set();
-  return teamsData.filter((team) => {
-    const key = `${team.position}-${team.name}`;
+  return items.filter((item) => {
+    const key = getKey(item);
     if (seen.has(key)) {
       return false;
     }
