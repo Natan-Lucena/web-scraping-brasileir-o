@@ -43,7 +43,7 @@ export default async function createMatchService(
     (elements) => elements.map((element) => element.innerText),
   );
 
-  const adversaryName = name === teams[0] ? teams[1] : teams[0];
+  const adversaryName = team === teams[0] ? teams[1] : teams[0];
 
   const { goalsFor, goalsAgainst } = parseScoreboard(scoreboard);
   console.log(
@@ -51,7 +51,7 @@ export default async function createMatchService(
   );
 
   const match: IMatch = {
-    teamName: name,
+    teamName: team,
     adversaryName: adversaryName,
     goalsFor: goalsFor,
     goalsAgainst: goalsAgainst,
