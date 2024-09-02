@@ -5,7 +5,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import 'dotenv/config';
 import { InjectQueue, Process, Processor } from '@nestjs/bull';
 import { Queue } from 'bull';
-import { filterUniqueTimes } from 'src/utils/filterUniqueTimes';
+import { filterUniqueItems } from 'src/utils/filterUniqueTimes';
 
 const QUEUE_NAME = process.env.SAVE_QUEUE_NAME;
 const JOB_NAME = 'process-team-job';
@@ -36,29 +36,8 @@ export class SaveTeamDataService {
     const page = await browser.newPage();
     await page.goto(url);
 
-    const buttonSelector = "//div[contains(text(), 'Mais classificações')]";
-    const buttonClicked = await page.evaluate((buttonSelector: string) => {
-      const button = document.evaluate(
-        buttonSelector,
-        document,
-        null,
-        XPathResult.FIRST_ORDERED_NODE_TYPE,
-        null,
-      ).singleNodeValue as HTMLElement;
-      if (button) {
-        button.click();
-        return true;
-      }
-      return false;
-    }, buttonSelector);
-
-    if (!buttonClicked) {
-      console.error(
-        "Botão 'Mais classificações' não encontrado na liga " + url,
-      );
-      await browser.close();
-      return;
-    }
+    await page.waitForSelector('.mjkhcd.OSrXXb');
+    await page.click('.mjkhcd.OSrXXb');
 
     const leagueSelector = '.PZPZlf[data-attrid="title"]';
     const tableRowSelector = '.imso-loa.imso-hov';
@@ -125,11 +104,6 @@ export class SaveTeamDataService {
               goalsAgainst: Number(goalsAgainst),
               goalDifference: Number(goalDifference),
             });
-          } else {
-            console.error(
-              'Não foi possível encontrar um ou mais elementos em uma linha:',
-              row,
-            );
           }
         });
 
@@ -139,18 +113,45 @@ export class SaveTeamDataService {
       leagueSelector,
     );
 
-    teamsData = filterUniqueTimes(teamsData);
+    teamsData = filterUniqueItems(
+      teamsData,
+      (team) => `${team.position}-${team.name}`,
+    );
 
     try {
-      await this.prisma.team.deleteMany({
-        where: { leagueName: teamsData[0].leagueName },
-      });
-      await this.prisma.team.createMany({ data: teamsData });
+      for (const teamData of teamsData) {
+        await this.prisma.team.upsert({
+          where: { name: teamData.name },
+          update: {
+            points: teamData.points,
+            position: teamData.position,
+            matchesPlayeds: teamData.matchesPlayeds,
+            matchesWon: teamData.matchesWon,
+            matchesDrawn: teamData.matchesDrawn,
+            matchesLost: teamData.matchesLost,
+            goalsFor: teamData.goalsFor,
+            goalsAgainst: teamData.goalsAgainst,
+            goalDifference: teamData.goalDifference,
+          },
+          create: {
+            name: teamData.name,
+            leagueName: teamData.leagueName,
+            points: teamData.points,
+            position: teamData.position,
+            matchesPlayeds: teamData.matchesPlayeds,
+            matchesWon: teamData.matchesWon,
+            matchesDrawn: teamData.matchesDrawn,
+            matchesLost: teamData.matchesLost,
+            goalsFor: teamData.goalsFor,
+            goalsAgainst: teamData.goalsAgainst,
+            goalDifference: teamData.goalDifference,
+          },
+        });
+      }
     } catch (e) {
       console.log(e);
     }
 
     await browser.close();
-    console.log('Dados da liga ' + teamsData[0].leagueName + ' com sucesso');
   }
 }
