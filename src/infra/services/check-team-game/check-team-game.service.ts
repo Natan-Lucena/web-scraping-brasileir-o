@@ -4,12 +4,13 @@ import * as puppeteer from 'puppeteer';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import 'dotenv/config';
 import { InjectQueue, Process, Processor } from '@nestjs/bull';
-import { Queue } from 'bull';
-import { filterUniqueTimes } from 'src/utils/filterUniqueTimes';
+import { Queue, Job } from 'bull';
+import createMatchService from '../create-match/create-match.service';
+import { filterUniqueItems } from 'src/utils/filterUniqueTimes';
 
 const QUEUE_NAME = process.env.CHECK_QUEUE_NAME;
 const JOB_NAME = 'process-check-game-job';
-
+const JOB_EMAIL = 'send-email-job';
 @Injectable()
 @Processor(QUEUE_NAME)
 export class CheckTeamGameService {
@@ -36,29 +37,8 @@ export class CheckTeamGameService {
     const page = await browser.newPage();
     await page.goto(url);
 
-    const buttonSelector = "//div[contains(text(), 'Mais classificações')]";
-    const buttonClicked = await page.evaluate((buttonSelector: string) => {
-      const button = document.evaluate(
-        buttonSelector,
-        document,
-        null,
-        XPathResult.FIRST_ORDERED_NODE_TYPE,
-        null,
-      ).singleNodeValue as HTMLElement;
-      if (button) {
-        button.click();
-        return true;
-      }
-      return false;
-    }, buttonSelector);
-
-    if (!buttonClicked) {
-      console.error(
-        "Botão 'Mais classificações' não encontrado na liga " + url,
-      );
-      await browser.close();
-      return;
-    }
+    await page.waitForSelector('.mjkhcd.OSrXXb');
+    await page.click('.mjkhcd.OSrXXb');
 
     const tableRowSelector = '.imso-loa.imso-hov';
     await page.waitForSelector(tableRowSelector);
@@ -70,38 +50,97 @@ export class CheckTeamGameService {
       const data = [];
 
       rows.forEach((row) => {
-        const positionElement = row.querySelector('td:nth-child(2) .iU5t0d');
         const nameElement = row.querySelector('td:nth-child(3) .ellipsisize');
-        const inGameElement = row.querySelector('.GXDoWd.Ycf7w.OGs04e.de0OAd');
+        const inGameElements = row.querySelectorAll('.GXDoWd.Ycf7w.OGs04e');
 
-        if (inGameElement) {
-          const position = positionElement.innerText;
+        if (inGameElements.length > 0) {
           const name = nameElement.innerText;
-          const inGame = true;
-          const scoreboard = inGameElement.innerText;
+          const scoreboard = inGameElements[0].innerText;
 
           data.push({
             name,
-            position,
-            inGame,
             scoreboard,
           });
-        } else {
-          console.error(
-            'Não foi possível encontrar um ou mais elementos em uma linha:',
-            row,
-          );
         }
       });
 
       return data;
     }, tableRowSelector);
-    // pega o nome do time, ve as partidas, se o time está jogando e n tem partida, CREATE MATCH
-    // pega o nome do time, ve as partidas, se o time está com um placar diferente da partida, NOTIFY USER
-    // pega as partidas, se tem partida in game, mas nenhum time está jogando, update IN game -> false
-    teamsData = filterUniqueTimes(teamsData);
+
+    teamsData = filterUniqueItems(
+      teamsData,
+      (team) => `${team.name}-${team.scoreboard}`,
+    );
+
     console.log(teamsData);
+
+    for (const team of teamsData) {
+      try {
+        const data = await createMatchService(team.name, team.scoreboard);
+
+        const existingTeam = await this.prisma.team.findUnique({
+          where: { name: data.teamName },
+        });
+
+        if (!existingTeam) {
+          console.error(`Time ${data.teamName} não encontrado na tabela Team`);
+          continue;
+        }
+
+        const match = await this.prisma.match.findFirst({
+          where: {
+            teamName: data.teamName,
+            adversaryName: data.adversaryName,
+          },
+        });
+
+        if (!match) {
+          await this.prisma.match.create({
+            data: data,
+          });
+          continue;
+        }
+
+        if (
+          match.goalsFor !== data.goalsFor ||
+          match.goalsAgainst !== data.goalsAgainst
+        ) {
+          await this.prisma.match.update({
+            where: {
+              id: match.id,
+            },
+            data: data,
+          });
+        }
+
+        const interestedUsers = await this.prisma.userInterest.findMany({
+          where: {
+            teamName: team.name,
+          },
+          include: {
+            User: true,
+          },
+        });
+
+        for (const user of interestedUsers) {
+          await this.queue.add(JOB_EMAIL, {
+            user,
+            matchData: data,
+          });
+        }
+      } catch (error) {
+        console.error(`Erro ao processar o time ${team.name}:`, error);
+      }
+    }
+
     await browser.close();
-    console.log('Dados da liga ' + teamsData[0].leagueName + ' com sucesso');
+  }
+
+  @Process(JOB_EMAIL)
+  async handleSendEmailJob(job: Job) {
+    const { user, matchData } = job.data;
+    console.log(
+      `Enviando email para ${user.email} sobre o jogo do time ${matchData.teamName}`,
+    );
   }
 }
