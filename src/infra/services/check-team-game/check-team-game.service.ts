@@ -118,7 +118,7 @@ export class CheckTeamGameService {
             teamName: team.name,
           },
           select: {
-            User: true,
+            User: { select: { email: true } },
           },
         });
         for (const user of interestedUsers) {
