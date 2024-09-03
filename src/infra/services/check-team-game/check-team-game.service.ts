@@ -117,14 +117,13 @@ export class CheckTeamGameService {
           where: {
             teamName: team.name,
           },
-          include: {
+          select: {
             User: true,
           },
         });
-
         for (const user of interestedUsers) {
           await this.queue.add(JOB_EMAIL, {
-            user,
+            user: user.User,
             matchData: data,
           });
         }
@@ -139,6 +138,7 @@ export class CheckTeamGameService {
   @Process(JOB_EMAIL)
   async handleSendEmailJob(job: Job) {
     const { user, matchData } = job.data;
+    console.log(user);
     console.log(
       `Enviando email para ${user.email} sobre o jogo do time ${matchData.teamName}`,
     );
