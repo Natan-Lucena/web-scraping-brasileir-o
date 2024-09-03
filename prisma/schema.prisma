@@ -13,20 +13,58 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-
 model Team {
-  leagueName String 
-  id Int @id @default(autoincrement())
-  name String @unique
-  points Int @default(0)
-  position Int 
-  matchesPlayeds Int @default(0)
-  matchesWon Int @default(0)
-  matchesDrawn Int @default(0)
-  matchesLost Int @default(0)
-  goalsFor Int @default(0)
-  goalsAgainst Int @default(0)
-  goalDifference Int @default(0)
+  leagueName     String
+  id             Int            @id @default(autoincrement())
+  name           String         @unique
+  points         Int            @default(0)
+  position       Int
+  matchesPlayeds Int            @default(0)
+  matchesWon     Int            @default(0)
+  matchesDrawn   Int            @default(0)
+  matchesLost    Int            @default(0)
+  goalsFor       Int            @default(0)
+  goalsAgainst   Int            @default(0)
+  goalDifference Int            @default(0)
+  MatchesFor     Match[]        @relation("teamMatches")
+  MatchsAgainst  Match[]        @relation("matchesAgainst")
+  userInterests  UserInterest[]
 
   @@map("teams")
+}
+
+model User {
+  id            Int            @id @default(autoincrement())
+  email         String         @unique
+  name          String
+  phone         String         @unique
+  password      String
+  userInterests UserInterest[]
+
+  @@map("users")
+}
+
+model Match {
+  id            Int      @id @default(autoincrement())
+  teamName      String
+  adversaryName String
+  inGame        Boolean  @default(true)
+  goalsFor      Int      @default(0)
+  goalsAgainst  Int      @default(0)
+  createdAt     DateTime @default(now())
+  Team          Team     @relation("teamMatches", fields: [teamName], references: [name])
+  Adversary     Team     @relation("matchesAgainst", fields: [adversaryName], references: [name])
+
+  @@map("matches")
+}
+
+model UserInterest {
+  id       Int    @id @default(autoincrement())
+  userId   Int
+  teamName String
+  User     User   @relation(fields: [userId], references: [id])
+  Team     Team   @relation(fields: [teamName], references: [name])
+
+  @@unique([userId, teamName])
+  @@map("user_interests")
 }
