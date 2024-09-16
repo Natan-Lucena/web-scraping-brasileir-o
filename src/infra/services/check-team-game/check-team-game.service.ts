@@ -24,7 +24,6 @@ export class CheckTeamGameService implements OnModuleInit, OnModuleDestroy {
     private readonly queue: Queue,
   ) {}
 
-  // Inicializa o navegador ao iniciar o serviço
   async onModuleInit() {
     this.browser = await puppeteer.launch({
       headless: false,
@@ -32,7 +31,6 @@ export class CheckTeamGameService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
-  // Fecha o navegador quando o módulo é destruído (por exemplo, quando o serviço é encerrado)
   async onModuleDestroy() {
     if (this.browser) {
       await this.browser.close();
@@ -42,18 +40,24 @@ export class CheckTeamGameService implements OnModuleInit, OnModuleDestroy {
   @Cron(CronExpression.EVERY_MINUTE)
   async runJob() {
     const urls = process.env.TEAMS_API_URL.split(',');
-    urls.map(async (url) => await this.queue.add(JOB_NAME, { url }));
+    await Promise.all(urls.map((url) => this.queue.add(JOB_NAME, { url })));
   }
 
   @Process(JOB_NAME)
   async processQueue(job: any) {
     const { url } = job.data;
 
-    const page = await this.browser.newPage(); // Abre uma nova página no navegador
+    const page = await this.browser.newPage();
     await page.goto(url);
 
-    await page.waitForSelector('.mjkhcd.OSrXXb');
-    await page.click('.mjkhcd.OSrXXb');
+    page.evaluate(() => {
+      if (document.querySelector('.mjkhcd.OSrXXb')) {
+        const button = document.querySelector('.mjkhcd.OSrXXb') as HTMLElement;
+        return button.click();
+      }
+      const button = document.querySelector('.z1asCe.QFl0Ff') as HTMLElement;
+      return button.click();
+    });
 
     const tableRowSelector = '.imso-loa.imso-hov';
     await page.waitForSelector(tableRowSelector);
@@ -82,8 +86,7 @@ export class CheckTeamGameService implements OnModuleInit, OnModuleDestroy {
       return data;
     }, tableRowSelector);
 
-    await page.close(); // Fecha a página depois de processar a URL
-
+    await page.close();
     teamsData = filterUniqueItems(
       teamsData,
       (team) => `${team.name}-${team.scoreboard}`,
@@ -156,6 +159,14 @@ export class CheckTeamGameService implements OnModuleInit, OnModuleDestroy {
       } catch (error) {
         console.error(`Erro ao processar o time ${team.name}:`, error);
       }
+    }
+    const remainingJobs = await this.queue.count();
+    if (remainingJobs === 0) {
+      console.log(
+        'Todos os jobs de save data foram processados, fechando o browser...',
+      );
+      await this.browser.close();
+      this.browser = null;
     }
   }
 
