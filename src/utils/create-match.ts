@@ -1,5 +1,12 @@
 import * as puppeteer from 'puppeteer';
 
+interface IMatch {
+  teamName: string;
+  adversaryName: string;
+  goalsFor: number;
+  goalsAgainst: number;
+}
+
 function replaceSpacesWithPlus(input: string): string {
   return input.replace(/\s+/g, '+');
 }
@@ -13,27 +20,15 @@ function parseScoreboard(scoreboard: string): {
     .map((score) => parseInt(score, 10));
   return { goalsFor, goalsAgainst };
 }
-interface IMatch {
-  teamName: string;
-  adversaryName: string;
-  goalsFor: number;
-  goalsAgainst: number;
-}
 
-export default async function createMatchService(
+export default async function createMatch(
   team: string,
   scoreboard: string,
+  page: puppeteer.Page,
 ): Promise<IMatch> {
   const name = replaceSpacesWithPlus(team);
 
-  const url = `https://www.google.com/search?q=${name}+${scoreboard}`;
-
-  const browser = await puppeteer.launch({
-    headless: false,
-    defaultViewport: null,
-  });
-
-  const page = await browser.newPage();
+  const url = `https://www.google.com/search?q=${name}+futebol+clube+${scoreboard}+ao+vivo`;
 
   await page.goto(url);
 
@@ -47,7 +42,7 @@ export default async function createMatchService(
 
   const { goalsFor, goalsAgainst } = parseScoreboard(scoreboard);
   console.log(
-    `O time ${name} está jogando contra o ${adversaryName} e o placar está ${goalsFor} x ${goalsAgainst}`,
+    `O time ${team} está jogando contra o ${adversaryName} e o placar está ${goalsFor} x ${goalsAgainst}`,
   );
 
   const match: IMatch = {
@@ -56,7 +51,8 @@ export default async function createMatchService(
     goalsFor: goalsFor,
     goalsAgainst: goalsAgainst,
   };
-  await browser.close();
+
+  page.close();
 
   return match;
 }
