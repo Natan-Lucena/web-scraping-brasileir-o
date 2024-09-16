@@ -28,7 +28,7 @@ export default async function createMatch(
 ): Promise<IMatch> {
   const name = replaceSpacesWithPlus(team);
 
-  const url = `https://www.google.com/search?q=${name}+futebol+clube+${scoreboard}`;
+  const url = `https://www.google.com/search?q=${name}+futebol+clube+${scoreboard}+ao+vivo`;
 
   await page.goto(url);
 
