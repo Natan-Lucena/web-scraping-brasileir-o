@@ -7,6 +7,7 @@ import { InjectQueue, Process, Processor } from '@nestjs/bull';
 import { Queue, Job } from 'bull';
 import createMatchService from '../create-match/create-match.service';
 import { filterUniqueItems } from 'src/utils/filterUniqueTimes';
+import hasMatchEnded from 'src/utils/hasMatchEnded';
 
 const QUEUE_NAME = process.env.CHECK_QUEUE_NAME;
 const JOB_NAME = 'process-check-game-job';
@@ -20,14 +21,16 @@ export class CheckTeamGameService {
     private readonly queue: Queue,
   ) {}
 
-  @Cron(CronExpression.EVERY_MINUTE)
+  @Cron(CronExpression.EVERY_10_SECONDS)
   async runJob() {
     const urls = process.env.TEAMS_API_URL.split(',');
     urls.map(async (url) => await this.queue.add(JOB_NAME, { url }));
+    console.log('Job executado');
   }
 
   @Process(JOB_NAME)
   async processQueue(job: any) {
+    console.log('entrou');
     const { url } = job.data;
     const browser = await puppeteer.launch({
       headless: true,
@@ -41,11 +44,19 @@ export class CheckTeamGameService {
     await page.click('.mjkhcd.OSrXXb');
 
     const tableRowSelector = '.imso-loa.imso-hov';
+    const leagueSelector = '.PZPZlf[data-attrid="title"]';
+
     await page.waitForSelector(tableRowSelector);
 
     let rows;
     let teamsData = await page.evaluate(async (tableRowSelector: string) => {
       rows = document.querySelectorAll(tableRowSelector);
+      const leagueElement = document.querySelector(
+        leagueSelector,
+      ) as HTMLElement;
+      const leagueName = leagueElement
+        ? leagueElement.innerText
+        : 'Unknown League';
 
       const data = [];
 
@@ -56,14 +67,14 @@ export class CheckTeamGameService {
         if (inGameElements.length > 0) {
           const name = nameElement.innerText;
           const scoreboard = inGameElements[0].innerText;
-
           data.push({
             name,
             scoreboard,
+            leagueName,
           });
         }
       });
-
+      console.log(data);
       return data;
     }, tableRowSelector);
 
@@ -72,11 +83,29 @@ export class CheckTeamGameService {
       (team) => `${team.name}-${team.scoreboard}`,
     );
 
-    console.log(teamsData);
+    const matchsNow = await this.prisma.match.findMany({
+      where: { inGame: true, leagueName: teamsData[0].leagueName },
+    });
+    console.log('matchsNow', matchsNow);
+
+    const matchesThatEnded = hasMatchEnded({
+      matchTeams: matchsNow,
+      matchesOccoringNow: teamsData,
+    });
+    console.log('matchesThatEnded', matchesThatEnded);
+
+    await this.prisma.match.updateMany({
+      where: { id: { in: matchesThatEnded.map((match) => match.id) } },
+      data: { inGame: false },
+    });
 
     for (const team of teamsData) {
       try {
-        const data = await createMatchService(team.name, team.scoreboard);
+        const data = await createMatchService(
+          team.name,
+          team.scoreboard,
+          team.leagueName,
+        );
 
         const existingTeam = await this.prisma.team.findUnique({
           where: { name: data.teamName },
@@ -91,6 +120,7 @@ export class CheckTeamGameService {
           where: {
             teamName: data.teamName,
             adversaryName: data.adversaryName,
+            inGame: true,
           },
         });
 

@@ -18,11 +18,13 @@ interface IMatch {
   adversaryName: string;
   goalsFor: number;
   goalsAgainst: number;
+  leagueName: string;
 }
 
 export default async function createMatchService(
   team: string,
   scoreboard: string,
+  leagueName: string,
 ): Promise<IMatch> {
   const name = replaceSpacesWithPlus(team);
 
@@ -55,6 +57,7 @@ export default async function createMatchService(
     adversaryName: adversaryName,
     goalsFor: goalsFor,
     goalsAgainst: goalsAgainst,
+    leagueName,
   };
   await browser.close();
 
