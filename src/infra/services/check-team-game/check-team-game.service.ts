@@ -51,15 +51,20 @@ export class CheckTeamGameService implements OnModuleInit, OnModuleDestroy {
     const page = await this.browser.newPage();
     await page.goto(url);
 
-    await page.waitForSelector('.mjkhcd.OSrXXb');
-    await page.click('.mjkhcd.OSrXXb');
-
-    const leagueSelector = '.PZPZlf[data-attrid="title"]';
+    let leagueSelector: string;
+    const elemento = await page.$('.mjkhcd.OSrXXb');
+    if (elemento) {
+      await elemento.click();
+      leagueSelector = '.PZPZlf[data-attrid="title"]';
+    } else {
+      await page.click('.U8v51e.S3PB2d');
+      leagueSelector = '.ofy7ae';
+    }
     const tableRowSelector = '.imso-loa.imso-hov';
     await page.waitForSelector(tableRowSelector);
 
     let rows;
-    let teamsData = await page.evaluate(
+    const teamsData = await page.evaluate(
       async (tableRowSelector: string, leagueSelector: string) => {
         rows = document.querySelectorAll(tableRowSelector);
         const leagueElement = document.querySelector(
@@ -69,7 +74,8 @@ export class CheckTeamGameService implements OnModuleInit, OnModuleDestroy {
           ? leagueElement.innerText
           : 'Unknown League';
 
-        const data: { name: string; scoreboard: string; league: string }[] = [];
+        const match: { name: string; scoreboard: string; league: string }[] =
+          [];
         rows.forEach((row) => {
           const nameElement = row.querySelector('td:nth-child(3) .ellipsisize');
           const inGameElements = row.querySelectorAll('.GXDoWd.Ycf7w.OGs04e');
@@ -78,7 +84,7 @@ export class CheckTeamGameService implements OnModuleInit, OnModuleDestroy {
             const name = nameElement.innerText;
             const scoreboard = inGameElements[0].innerText;
 
-            data.push({
+            match.push({
               name,
               scoreboard,
               league: leagueName,
@@ -86,7 +92,7 @@ export class CheckTeamGameService implements OnModuleInit, OnModuleDestroy {
           }
         });
 
-        return data;
+        return { match, leagueName };
       },
       tableRowSelector,
       leagueSelector,
@@ -94,27 +100,26 @@ export class CheckTeamGameService implements OnModuleInit, OnModuleDestroy {
 
     await page.close();
 
-    teamsData = filterUniqueItems(
-      teamsData,
+    teamsData.match = filterUniqueItems(
+      teamsData.match,
       (team) => `${team.name}-${team.scoreboard}-${team.league}`,
     );
+    console.log('Times encontrados:', teamsData.match);
 
-    console.log(teamsData);
     const matchsNow = await this.prisma.match.findMany({
-      where: { inGame: true, leagueName: teamsData[0].league },
+      where: { inGame: true, leagueName: teamsData.leagueName },
     });
 
     const matchesThatEnded = hasMatchEnded({
       matchTeams: matchsNow,
-      matchesOccoringNow: teamsData,
+      matchesOccoringNow: teamsData.match,
     });
-
     await this.prisma.match.updateMany({
       where: { id: { in: matchesThatEnded.map((match) => match.id) } },
       data: { inGame: false },
     });
 
-    for (const team of teamsData) {
+    for (const team of teamsData.match) {
       try {
         const page = await this.browser.newPage();
         const data = await createMatchService(
@@ -177,7 +182,7 @@ export class CheckTeamGameService implements OnModuleInit, OnModuleDestroy {
         }
         continue;
       } catch (error) {
-        console.error(`Erro ao processar o time ${team.name}:`, error);
+        console.error(`Erro ao processar o time ${team.name}:`, error.message);
       }
     }
     const remainingJobs = await this.queue.count();
