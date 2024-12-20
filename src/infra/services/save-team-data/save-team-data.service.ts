@@ -34,7 +34,7 @@ export class SaveTeamDataService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  @Cron(CronExpression.EVERY_MINUTE)
+  @Cron(CronExpression.EVERY_10_SECONDS)
   async runJob() {
     const urls = process.env.TEAMS_API_URL.split(',');
     await Promise.all(urls.map((url) => this.queue.add(JOB_NAME, { url })));
@@ -47,10 +47,16 @@ export class SaveTeamDataService implements OnModuleInit, OnModuleDestroy {
     const page = await this.browser.newPage();
     await page.goto(url);
 
-    await page.waitForSelector('.mjkhcd.OSrXXb');
-    await page.click('.mjkhcd.OSrXXb');
+    let leagueSelector: string;
+    const elemento = await page.$('.mjkhcd.OSrXXb');
+    if (elemento) {
+      await elemento.click();
+      leagueSelector = '.PZPZlf[data-attrid="title"]';
+    } else {
+      await page.click('.U8v51e.S3PB2d');
+      leagueSelector = '.ofy7ae';
+    }
 
-    const leagueSelector = '.PZPZlf[data-attrid="title"]';
     const tableRowSelector = '.imso-loa.imso-hov';
     await page.waitForSelector(tableRowSelector);
 
