@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import * as puppeteer from 'puppeteer';
 import { Cron, CronExpression } from '@nestjs/schedule';
@@ -12,34 +12,51 @@ const JOB_NAME = 'process-team-job';
 
 @Injectable()
 @Processor(QUEUE_NAME)
-export class SaveTeamDataService {
+export class SaveTeamDataService implements OnModuleInit, OnModuleDestroy {
+  private browser: puppeteer.Browser;
+
   constructor(
     private prisma: PrismaService,
     @InjectQueue(QUEUE_NAME)
     private readonly queue: Queue,
   ) {}
 
-  @Cron(CronExpression.EVERY_MINUTE)
+  async onModuleInit() {
+    this.browser = await puppeteer.launch({
+      headless: false,
+      defaultViewport: null,
+    });
+  }
+
+  async onModuleDestroy() {
+    if (this.browser) {
+      await this.browser.close();
+    }
+  }
+
+  @Cron(CronExpression.EVERY_10_SECONDS)
   async runJob() {
     const urls = process.env.TEAMS_API_URL.split(',');
-    urls.map(async (url) => await this.queue.add(JOB_NAME, { url }));
+    await Promise.all(urls.map((url) => this.queue.add(JOB_NAME, { url })));
   }
 
   @Process(JOB_NAME)
   async processQueue(job: any) {
     const { url } = job.data;
-    const browser = await puppeteer.launch({
-      headless: true,
-      defaultViewport: null,
-    });
 
-    const page = await browser.newPage();
+    const page = await this.browser.newPage();
     await page.goto(url);
 
-    await page.waitForSelector('.mjkhcd.OSrXXb');
-    await page.click('.mjkhcd.OSrXXb');
+    let leagueSelector: string;
+    const elemento = await page.$('.mjkhcd.OSrXXb');
+    if (elemento) {
+      await elemento.click();
+      leagueSelector = '.PZPZlf[data-attrid="title"]';
+    } else {
+      await page.click('.U8v51e.S3PB2d');
+      leagueSelector = '.ofy7ae';
+    }
 
-    const leagueSelector = '.PZPZlf[data-attrid="title"]';
     const tableRowSelector = '.imso-loa.imso-hov';
     await page.waitForSelector(tableRowSelector);
 
@@ -113,11 +130,12 @@ export class SaveTeamDataService {
       leagueSelector,
     );
 
+    await page.close();
+
     teamsData = filterUniqueItems(
       teamsData,
       (team) => `${team.position}-${team.name}`,
     );
-
     try {
       for (const teamData of teamsData) {
         await this.prisma.team.upsert({
@@ -151,7 +169,13 @@ export class SaveTeamDataService {
     } catch (e) {
       console.log(e);
     }
-
-    await browser.close();
+    const remainingJobs = await this.queue.count();
+    if (remainingJobs === 0) {
+      console.log(
+        'Todos os jobs de check team foram processados, fechando o browser...',
+      );
+      await this.browser.close();
+      this.browser = null;
+    }
   }
 }

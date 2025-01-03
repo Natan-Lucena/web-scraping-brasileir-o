@@ -1,110 +1,132 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import * as puppeteer from 'puppeteer';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import 'dotenv/config';
 import { InjectQueue, Process, Processor } from '@nestjs/bull';
 import { Queue, Job } from 'bull';
-import createMatchService from '../create-match/create-match.service';
 import { filterUniqueItems } from 'src/utils/filterUniqueTimes';
+import createMatchService from '../create-match/create-match.service';
 import hasMatchEnded from 'src/utils/hasMatchEnded';
 
 const QUEUE_NAME = process.env.CHECK_QUEUE_NAME;
 const JOB_NAME = 'process-check-game-job';
-const JOB_EMAIL = 'send-email-job';
+const JOB_EMAIL_CREATE = 'send-email-create-job';
+const JOB_EMAIL_UPDATE = 'send-email-update-job';
+
 @Injectable()
 @Processor(QUEUE_NAME)
-export class CheckTeamGameService {
+export class CheckTeamGameService implements OnModuleInit, OnModuleDestroy {
+  private browser: puppeteer.Browser;
+
   constructor(
     private prisma: PrismaService,
     @InjectQueue(QUEUE_NAME)
     private readonly queue: Queue,
   ) {}
 
+  async onModuleInit() {
+    this.browser = await puppeteer.launch({
+      headless: false,
+      defaultViewport: null,
+    });
+  }
+
+  async onModuleDestroy() {
+    if (this.browser) {
+      await this.browser.close();
+    }
+  }
+
   @Cron(CronExpression.EVERY_10_SECONDS)
   async runJob() {
     const urls = process.env.TEAMS_API_URL.split(',');
-    urls.map(async (url) => await this.queue.add(JOB_NAME, { url }));
-    console.log('Job executado');
+    await Promise.all(urls.map((url) => this.queue.add(JOB_NAME, { url })));
   }
 
   @Process(JOB_NAME)
   async processQueue(job: any) {
-    console.log('entrou');
     const { url } = job.data;
-    const browser = await puppeteer.launch({
-      headless: true,
-      defaultViewport: null,
-    });
 
-    const page = await browser.newPage();
+    const page = await this.browser.newPage();
     await page.goto(url);
 
-    await page.waitForSelector('.mjkhcd.OSrXXb');
-    await page.click('.mjkhcd.OSrXXb');
-
+    let leagueSelector: string;
+    const elemento = await page.$('.mjkhcd.OSrXXb');
+    if (elemento) {
+      await elemento.click();
+      leagueSelector = '.PZPZlf[data-attrid="title"]';
+    } else {
+      await page.click('.U8v51e.S3PB2d');
+      leagueSelector = '.ofy7ae';
+    }
     const tableRowSelector = '.imso-loa.imso-hov';
-    const leagueSelector = '.PZPZlf[data-attrid="title"]';
-
     await page.waitForSelector(tableRowSelector);
 
     let rows;
-    let teamsData = await page.evaluate(async (tableRowSelector: string) => {
-      rows = document.querySelectorAll(tableRowSelector);
-      const leagueElement = document.querySelector(
-        leagueSelector,
-      ) as HTMLElement;
-      const leagueName = leagueElement
-        ? leagueElement.innerText
-        : 'Unknown League';
+    const teamsData = await page.evaluate(
+      async (tableRowSelector: string, leagueSelector: string) => {
+        rows = document.querySelectorAll(tableRowSelector);
+        const leagueElement = document.querySelector(
+          leagueSelector,
+        ) as HTMLElement;
+        const leagueName = leagueElement
+          ? leagueElement.innerText
+          : 'Unknown League';
 
-      const data = [];
+        const match: { name: string; scoreboard: string; league: string }[] =
+          [];
+        rows.forEach((row) => {
+          const nameElement = row.querySelector('td:nth-child(3) .ellipsisize');
+          const inGameElements = row.querySelectorAll('.GXDoWd.Ycf7w.OGs04e');
 
-      rows.forEach((row) => {
-        const nameElement = row.querySelector('td:nth-child(3) .ellipsisize');
-        const inGameElements = row.querySelectorAll('.GXDoWd.Ycf7w.OGs04e');
+          if (inGameElements.length > 0) {
+            const name = nameElement.innerText;
+            const scoreboard = inGameElements[0].innerText;
 
-        if (inGameElements.length > 0) {
-          const name = nameElement.innerText;
-          const scoreboard = inGameElements[0].innerText;
-          data.push({
-            name,
-            scoreboard,
-            leagueName,
-          });
-        }
-      });
-      console.log(data);
-      return data;
-    }, tableRowSelector);
+            match.push({
+              name,
+              scoreboard,
+              league: leagueName,
+            });
+          }
+        });
 
-    teamsData = filterUniqueItems(
-      teamsData,
-      (team) => `${team.name}-${team.scoreboard}`,
+        return { match, leagueName };
+      },
+      tableRowSelector,
+      leagueSelector,
     );
 
+    await page.close();
+
+    teamsData.match = filterUniqueItems(
+      teamsData.match,
+      (team) => `${team.name}-${team.scoreboard}-${team.league}`,
+    );
+    console.log('Times encontrados:', teamsData.match);
+
     const matchsNow = await this.prisma.match.findMany({
-      where: { inGame: true, leagueName: teamsData[0].leagueName },
+      where: { inGame: true, leagueName: teamsData.leagueName },
     });
-    console.log('matchsNow', matchsNow);
 
     const matchesThatEnded = hasMatchEnded({
       matchTeams: matchsNow,
-      matchesOccoringNow: teamsData,
+      matchesOccoringNow: teamsData.match,
     });
-    console.log('matchesThatEnded', matchesThatEnded);
-
     await this.prisma.match.updateMany({
       where: { id: { in: matchesThatEnded.map((match) => match.id) } },
       data: { inGame: false },
     });
 
-    for (const team of teamsData) {
+    for (const team of teamsData.match) {
       try {
+        const page = await this.browser.newPage();
         const data = await createMatchService(
           team.name,
           team.scoreboard,
-          team.leagueName,
+          team.league,
+          page,
         );
 
         const existingTeam = await this.prisma.team.findUnique({
@@ -147,28 +169,45 @@ export class CheckTeamGameService {
           where: {
             teamName: team.name,
           },
-          include: {
-            User: true,
+          select: {
+            User: { select: { email: true } },
           },
         });
 
         for (const user of interestedUsers) {
-          await this.queue.add(JOB_EMAIL, {
-            user,
+          await this.queue.add(JOB_EMAIL_CREATE, {
+            user: user.User,
             matchData: data,
           });
         }
+        continue;
       } catch (error) {
-        console.error(`Erro ao processar o time ${team.name}:`, error);
+        console.error(`Erro ao processar o time ${team.name}:`, error.message);
       }
     }
-
-    await browser.close();
+    const remainingJobs = await this.queue.count();
+    if (remainingJobs === 0) {
+      console.log(
+        'Todos os jobs de save data foram processados, fechando o browser...',
+      );
+      await this.browser.close();
+      this.browser = null;
+    }
   }
 
-  @Process(JOB_EMAIL)
-  async handleSendEmailJob(job: Job) {
+  @Process(JOB_EMAIL_UPDATE)
+  async handleSendEmailJobUpdate(job: Job) {
     const { user, matchData } = job.data;
+    console.log(user);
+    console.log(
+      `Enviando email para ${user.email} sobre o jogo do time ${matchData.teamName}`,
+    );
+  }
+
+  @Process(JOB_EMAIL_CREATE)
+  async handleSendEmailJobCreate(job: Job) {
+    const { user, matchData } = job.data;
+    console.log(user);
     console.log(
       `Enviando email para ${user.email} sobre o jogo do time ${matchData.teamName}`,
     );

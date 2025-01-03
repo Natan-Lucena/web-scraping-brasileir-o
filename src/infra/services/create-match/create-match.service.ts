@@ -25,17 +25,11 @@ export default async function createMatchService(
   team: string,
   scoreboard: string,
   leagueName: string,
+  page: puppeteer.Page,
 ): Promise<IMatch> {
   const name = replaceSpacesWithPlus(team);
 
-  const url = `https://www.google.com/search?q=${name}+${scoreboard}`;
-
-  const browser = await puppeteer.launch({
-    headless: false,
-    defaultViewport: null,
-  });
-
-  const page = await browser.newPage();
+  const url = `https://www.google.com/search?q=${name}+${scoreboard}+${leagueName}+hoje`;
 
   await page.goto(url);
 
@@ -48,9 +42,6 @@ export default async function createMatchService(
   const adversaryName = team === teams[0] ? teams[1] : teams[0];
 
   const { goalsFor, goalsAgainst } = parseScoreboard(scoreboard);
-  console.log(
-    `O time ${name} está jogando contra o ${adversaryName} e o placar está ${goalsFor} x ${goalsAgainst}`,
-  );
 
   const match: IMatch = {
     teamName: team,
@@ -59,7 +50,7 @@ export default async function createMatchService(
     goalsAgainst: goalsAgainst,
     leagueName,
   };
-  await browser.close();
+  page.close();
 
   return match;
 }
